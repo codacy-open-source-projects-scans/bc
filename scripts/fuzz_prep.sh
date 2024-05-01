@@ -77,7 +77,7 @@ cd "$scriptdir/.."
 
 set -e
 
-CFLAGS="-flto -fstack-protector-all -fsanitize=shadow-call-stack -ffixed-x18 -fsanitize=cfi -fvisibility=hidden"
+CFLAGS="-flto -fstack-protector-all -fsanitize=shadow-call-stack -fsanitize=cfi -fvisibility=hidden"
 
 if [ "$asan" -ne 0 ]; then
 	CFLAGS="$CFLAGS -fsanitize=address"
@@ -87,6 +87,8 @@ fi
 export AFL_LLVM_LAF_SPLIT_SWITCHES=1
 export AFL_LLVM_LAF_TRANSFORM_COMPARES=1
 export AFL_LLVM_LAF_SPLIT_COMPARES=1
+export AFL_LLVM_LTO_CALLER=1
+export AFL_LLVM_LTO_CALLER_DEPTH=5
 
 # We want a debug build because asserts are counted as crashes too.
 CC="$CC" CFLAGS="$CFLAGS" ./configure.sh -gO3 -z
