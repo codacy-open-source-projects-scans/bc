@@ -493,7 +493,7 @@
 #define BC_VM_SAFE_RESULT(r) ((r)->t >= BC_RESULT_TEMP)
 
 /// The invalid locale catalog return value.
-#define BC_VM_INVALID_CATALOG ((nl_catd) -1)
+#define BC_VM_INVALID_CATALOG ((nl_catd) - 1)
 
 /**
  * Returns true if the *unsigned* multiplication overflows.
@@ -794,7 +794,7 @@ bc_vm_info(const char* const help);
  * @return      A status.
  */
 BcStatus
-bc_vm_boot(int argc, char* argv[]);
+bc_vm_boot(int argc, const char* argv[]);
 
 /**
  * Initializes some of the BcVm global. This is separate to make things easier
