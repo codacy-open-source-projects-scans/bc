@@ -68,7 +68,7 @@ usage() {
 	printf '       [--man3dir=MAN3DIR]\n'
 
 	if [ "$_usage_val" -ne 0 ]; then
-		exit
+		exit "$_usage_val"
 	fi
 
 	printf '\n'
@@ -724,6 +724,7 @@ predefined_build() {
 			all_locales=0
 			library=0
 			fuzz=0
+			ossfuzz=0
 			time_tests=0
 			vg=0
 			memcheck=0
@@ -757,6 +758,7 @@ predefined_build() {
 			all_locales=0
 			library=0
 			fuzz=0
+			ossfuzz=0
 			time_tests=0
 			vg=0
 			memcheck=0
@@ -774,7 +776,8 @@ predefined_build() {
 			dc_default_digit_clamp=0;;
 
 		GDH)
-			CFLAGS="-flto -Weverything -Wno-padded -Wno-unsafe-buffer-usage -Wno-poison-system-directories -Werror -pedantic -std=c11"
+			CFLAGS="-Weverything -Wno-padded -Wno-unsafe-buffer-usage -Wno-poison-system-directories"
+			CFLAGS="$CFLAGS -Wno-switch-default -Werror -pedantic -std=c11"
 			bc_only=0
 			dc_only=0
 			coverage=0
@@ -791,6 +794,7 @@ predefined_build() {
 			all_locales=0
 			library=0
 			fuzz=0
+			ossfuzz=0
 			time_tests=0
 			vg=0
 			memcheck=0
@@ -808,7 +812,8 @@ predefined_build() {
 			dc_default_digit_clamp=1;;
 
 		DBG)
-			CFLAGS="-Weverything -Wno-padded -Wno-unsafe-buffer-usage -Wno-poison-system-directories -Werror -pedantic -std=c11"
+			CFLAGS="-Weverything -Wno-padded -Wno-unsafe-buffer-usage -Wno-poison-system-directories"
+			CFLAGS="$CFLAGS -Wno-switch-default -Werror -pedantic -std=c11"
 			bc_only=0
 			dc_only=0
 			coverage=0
@@ -825,6 +830,7 @@ predefined_build() {
 			all_locales=0
 			library=0
 			fuzz=0
+			ossfuzz=0
 			time_tests=0
 			vg=0
 			memcheck=1
@@ -1541,14 +1547,14 @@ if [ "$nls" -ne 0 ]; then
 		flags="$flags -Wno-unreachable-code"
 	fi
 
-	"$CC" $CPPFLAGS $CFLAGS $flags -c "$scriptdir/src/vm.c" -o "./vm.o" > /dev/null 2>&1
+	"$CC" $CPPFLAGS $CFLAGS $flags -c "$scriptdir/src/vm.c" -E > /dev/null
 
 	err="$?"
 
 	rm -rf "./vm.o"
 
-	# If this errors, it is probably because of building on Windows,
-	# and NLS is not supported on Windows, so disable it.
+	# If this errors, it is probably because of building on Windows or musl,
+	# and NLS is not supported on Windows or musl, so disable it.
 	if [ "$err" -ne 0 ]; then
 		printf 'NLS does not work.\n'
 		if [ $force -eq 0 ]; then
@@ -1561,7 +1567,7 @@ if [ "$nls" -ne 0 ]; then
 		printf 'NLS works.\n\n'
 
 		printf 'Testing gencat...\n'
-		gencat "./en_US.cat" "$scriptdir/locales/en_US.msg" > /dev/null 2>&1
+		gencat "./en_US.cat" "$scriptdir/locales/en_US.msg" > /dev/null
 
 		err="$?"
 
@@ -1637,7 +1643,7 @@ if [ "$hist" -eq 1 ]; then
 	flags="$flags -DBC_ENABLE_EXTRA_MATH=$extra_math -DBC_ENABLE_OSSFUZZ=0"
 	flags="$flags -I$scriptdir/include/ -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700"
 
-	"$CC" $CPPFLAGS $CFLAGS $flags -c "$scriptdir/src/history.c" -o "./history.o" > /dev/null 2>&1
+	"$CC" $CPPFLAGS $CFLAGS $flags -c "$scriptdir/src/history.c" -E > /dev/null
 
 	err="$?"
 
@@ -1707,7 +1713,7 @@ set +e
 printf 'Testing for FreeBSD...\n'
 
 flags="-DBC_TEST_FREEBSD -DBC_ENABLE_AFL=0"
-"$CC" $CPPFLAGS $CFLAGS $flags "-I$scriptdir/include" -E "$scriptdir/src/vm.c" > /dev/null 2>&1
+"$CC" $CPPFLAGS $CFLAGS $flags "-I$scriptdir/include" -E "$scriptdir/scripts/os.c" > /dev/null
 
 err="$?"
 
@@ -1724,7 +1730,7 @@ fi
 printf 'Testing for macOS...\n'
 
 flags="-DBC_TEST_APPLE -DBC_ENABLE_AFL=0"
-"$CC" $CPPFLAGS $CFLAGS $flags "-I$scriptdir/include" -E "$scriptdir/src/vm.c" > /dev/null 2>&1
+"$CC" $CPPFLAGS $CFLAGS $flags "-I$scriptdir/include" -E "$scriptdir/scripts/os.c" > /dev/null
 
 err="$?"
 
@@ -1752,7 +1758,7 @@ fi
 printf 'Testing for OpenBSD...\n'
 
 flags="-DBC_TEST_OPENBSD -DBC_ENABLE_AFL=0"
-"$CC" $CPPFLAGS $CFLAGS $flags "-I$scriptdir/include" -E "$scriptdir/src/vm.c" > /dev/null 2>&1
+"$CC" $CPPFLAGS $CFLAGS $flags "-I$scriptdir/include" -E "$scriptdir/scripts/os.c" > /dev/null
 
 err="$?"
 
@@ -1788,7 +1794,7 @@ GEN_DIR="$scriptdir/gen"
 # These lines set the appropriate targets based on whether `gen/strgen.c` or
 # `gen/strgen.sh` is used.
 GEN="strgen"
-GEN_EXEC_TARGET="\$(HOSTCC) -DBC_ENABLE_AFL=0 -I$scriptdir/include/  \$(HOSTCFLAGS) -o \$(GEN_EXEC) \$(GEN_C)"
+GEN_EXEC_TARGET="\$(HOSTCC) -DBC_ENABLE_AFL=0 -I$scriptdir/include/ \$(CPPFLAGS) \$(HOSTCFLAGS) -o \$(GEN_EXEC) \$(GEN_C)"
 CLEAN_PREREQS=" clean_gen clean_coverage"
 
 if [ -z "${GEN_HOST+set}" ]; then

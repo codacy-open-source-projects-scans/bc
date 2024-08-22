@@ -29,14 +29,31 @@
  *
  * *****************************************************************************
  *
- * The version of bc.
+ * File for testing compilation on different platforms.
  *
  */
 
-#ifndef BC_VERSION_H
-#define BC_VERSION_H
+// This is used by configure.sh to test for OpenBSD.
+#ifdef BC_TEST_OPENBSD
+#ifdef __OpenBSD__
+#error On OpenBSD without _BSD_SOURCE
+#endif // __OpenBSD__
+#endif // BC_TEST_OPENBSD
 
-/// The current version.
-#define VERSION 7.0.0
+// This is used by configure.sh to test for FreeBSD.
+#ifdef BC_TEST_FREEBSD
+#ifdef __FreeBSD__
+#error On FreeBSD with _POSIX_C_SOURCE
+#endif // __FreeBSD__
+#endif // BC_TEST_FREEBSD
 
-#endif // BC_VERSION_H
+// This is used by configure.sh to test for macOS.
+#ifdef BC_TEST_APPLE
+#ifdef __APPLE__
+#error On macOS without _DARWIN_C_SOURCE
+#endif // __APPLE__
+#endif // BC_TEST_APPLE
+
+extern int test;
+
+int test;
