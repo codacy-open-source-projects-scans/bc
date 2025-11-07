@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
-# Copyright (c) 2018-2024 Gavin D. Howard and contributors.
+# Copyright (c) 2018-2025 Gavin D. Howard and contributors.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -87,17 +87,10 @@ proj="bc"
 
 cd "$repo"
 
-if [ ! -f "../vs.zip" ]; then
-	printf 'Must have Windows builds!\n'
-	exit 1
-fi
-
 # We want the absolute path for later.
 repo=$(pwd)
 
-# This convoluted mess does pull the version out. If you change the format of
-# include/version.h, you may have to change this line.
-version=$(cat include/version.h | grep "VERSION " - | awk '{ print $3 }' -)
+version=$(cat "$repo/VERSION.txt" | head -n1)
 
 tag_msg="Version $version"
 projver="${proj}-${version}"
@@ -165,8 +158,10 @@ scripts/package.sh
 scripts/radamsa.sh
 scripts/radamsa.txt
 scripts/randmath.py
-scripts/release_settings.txt
-scripts/release.sh
+scripts/release_flags_rig.txt
+scripts/release_settings_make.txt
+scripts/release_settings_rig.txt
+scripts/release.yao
 scripts/test_settings.sh
 scripts/test_settings.txt
 tests/bc_outputs/
@@ -220,49 +215,54 @@ if [ -f windows.zip ]; then
 fi
 
 # Prepare Windows stuff.
-unzip vs.zip > /dev/null
-mv vs windows
+if [ -f vs.zip ]; then
+	unzip vs.zip > /dev/null
+	mv vs windows
 
-# Remove unneeded Windows stuff.
-rm -rf windows/*.vcxproj.user
-rm -rf windows/src2
-rm -rf windows/tests
-rm -rf windows/*.sln
-rm -rf windows/*.vcxproj
-rm -rf windows/*.vcxproj.filters
+	# Remove unneeded Windows stuff.
+	rm -rf windows/*.vcxproj.user
+	rm -rf windows/src2
+	rm -rf windows/tests
+	rm -rf windows/*.sln
+	rm -rf windows/*.vcxproj
+	rm -rf windows/*.vcxproj.filters
 
-rm -rf windows/bin/{Win32,x64}/{Debug,Release}/*.obj
-rm -rf windows/bin/{Win32,x64}/{Debug,Release}/*.iobj
-rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.exe.recipe
-rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.ilk
-rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.log
-rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.tlog
-rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.pdb
-rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.ipdb
-rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.vcxproj.FileListAbsolute.txt
-rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.Build.CppClean.log
-rm -rf windows/bin/{Win32,x64}/{Debug,Release}/strgen.exe
-rm -rf windows/bin/{Win32,x64}/{Debug,Release}/vc142.idb
-rm -rf windows/bin/{Win32,x64}/{Debug,Release}/vc142.pdb
+	rm -rf windows/bin/{Win32,x64}/{Debug,Release}/*.obj
+	rm -rf windows/bin/{Win32,x64}/{Debug,Release}/*.iobj
+	rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.exe.recipe
+	rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.ilk
+	rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.log
+	rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.tlog
+	rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.pdb
+	rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.ipdb
+	rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.vcxproj.FileListAbsolute.txt
+	rm -rf windows/bin/{Win32,x64}/{Debug,Release}/bc.Build.CppClean.log
+	rm -rf windows/bin/{Win32,x64}/{Debug,Release}/strgen.exe
+	rm -rf windows/bin/{Win32,x64}/{Debug,Release}/vc142.idb
+	rm -rf windows/bin/{Win32,x64}/{Debug,Release}/vc142.pdb
 
-rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/*.obj
-rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/bcl.lib.recipe
-rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/bcl.log
-rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/bcl.tlog
-rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/bcl.idb
-rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/bcl.pdb
-rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/bcl.vcxproj.FileListAbsolute.txt
-rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/bcl.Build.CppClean.log
+	rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/*.obj
+	rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/bcl.lib.recipe
+	rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/bcl.log
+	rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/bcl.tlog
+	rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/bcl.idb
+	rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/bcl.pdb
+	rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/bcl.vcxproj.FileListAbsolute.txt
+	rm -rf windows/lib/{Win32,x64}/{Debug,ReleaseMD,ReleaseMT}/bcl.Build.CppClean.log
 
-# Zip the Windows stuff.
-zip -r $projver-windows.zip windows > /dev/null
+	# Zip the Windows stuff.
+	zip -r $projver-windows.zip windows > /dev/null
+fi
 
 printf '\n'
 shasum "$projver.tar.gz"
 printf '\n'
 shasum "$projver.tar.xz"
-printf '\n'
-shasum "$projver-windows.zip"
+
+if [ -f vs.zip ]; then
+	printf '\n'
+	shasum "$projver-windows.zip"
+fi
 
 mkdir -p "releases/$projver"
 mv $projver* "releases/$projver"
