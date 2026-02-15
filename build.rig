@@ -374,11 +374,6 @@ push build_config: config_stack
 		}
 	}
 
-	if BUILD_MODE == @library
-	{
-		lib(LIBRARY, obj_files);
-	}
-
 	if BUILD_MODE == @both
 	{
 		@[ BC_BIN, DC_BIN ];
@@ -393,6 +388,13 @@ push build_config: config_stack
 	}
 	else
 	{
+		if BUILD_MODE != @library
+		{
+			error("Invalid build mode: " +~ str(BUILD_MODE));
+		}
+
+		lib(LIBRARY, obj_files);
+
 		includedir: str = get_includedir();
 		libdir: str = get_libdir();
 
@@ -407,6 +409,22 @@ push build_config: config_stack
 			target PC_FILE: PC_FILE +~ ".in"
 			{
 				generate_file(file_dep, tgt, "%%");
+			}
+		}
+
+		// If we can test, add the library test executable to the build, as well
+		// as the test itself.
+		if platform == host
+		{
+			libtesto: str = c2o("tests/bcl.c");
+
+			libtest: str = "bcl";
+
+			exe(libtest, @[ libtesto, LIBRARY ]);
+
+			test @bcl: libtest
+			{
+				$ @(path.join(".", tgt));
 			}
 		}
 
@@ -544,7 +562,9 @@ if OS != "Windows"
 
 			full_includedir: str = get_includedir();
 
-			safe_install(path.join(full_libdir, file_deps[2]), file_deps[2],
+			bclh: str = path.basename(file_deps[2]);
+
+			safe_install(path.join(full_includedir, bclh), file_deps[2],
 			             MANPAGE_INSTALL_MODE, false);
 
 			if bool(config["install_manpages"])
@@ -561,7 +581,7 @@ if OS != "Windows"
 		{
 			path1: str = path.join(get_libdir(), LIBRARY);
 			path2: str = path.join(get_pc_path(), PC_FILE);
-			path3: str = path.join(get_includedir(), BCL_HEADER);
+			path3: str = path.join(get_includedir(), path.basename(BCL_HEADER));
 
 			path.rmf(path1);
 			path.rmf(path2);
@@ -578,40 +598,23 @@ if OS != "Windows"
 }
 
 // If the platform matches the host, we can run the test suite.
-if platform == host
+if platform == host && BUILD_MODE != @library
 {
-	// If we have the library, build and run that test.
-	if BUILD_MODE == @library
+	if BUILD_MODE != @dc
 	{
-		libtesto: str = c2o("tests/bcl.c");
-
-		libtest: str = "bcl";
-
-		exe(libtest, @[ libtesto, targets[0] ]);
-
-		test @bcl: libtest
-		{
-			$ @(tgt);
-		}
+		exe_tests("bc");
 	}
-	else
+
+	if BUILD_MODE != @bc
 	{
-		if BUILD_MODE != @dc
-		{
-			exe_tests("bc");
-		}
+		exe_tests("dc");
+	}
 
-		if BUILD_MODE != @bc
+	target @clean_tests
+	{
+		for f: path.find_ext("txt")
 		{
-			exe_tests("dc");
-		}
-
-		target @clean_tests
-		{
-			for f: path.find_ext("txt")
-			{
-				path.rmf(f);
-			}
+			path.rmf(f);
 		}
 	}
 }
