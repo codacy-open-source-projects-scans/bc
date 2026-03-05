@@ -177,7 +177,7 @@ if LIBRARY_ENABLED == "0"
 				}
 				else
 				{
-					error("History does not work\n");
+					error("History does not work\n" +~ str(res.stderr_full));
 				}
 			}
 			else
@@ -239,6 +239,18 @@ if bool(config["lto"])
 	if CC contains "gcc" { @[ "-flto=auto" ]; } else { @[ "-flto" ]; }
 };
 
+hist_sym: sym = sym(config["history"]);
+
+lib_flag: []str =
+if hist_sym == @readline
+{
+	@[ "-lreadline" ];
+}
+else if hist_sym == @editline
+{
+	@[ "-ledit" ];
+};
+
 strict_flags: []str =
 if bool(config["strict"])
 {
@@ -260,7 +272,9 @@ if bool(config["strict"])
 			@[ "-Weverything", "-ferror-limit=100000", "-Wno-padded",
 			   "-Wno-unknown-warning-option", "-Wno-unsafe-buffer-usage",
 			   "-Wno-documentation-unknown-command", "-Wno-pre-c11-compat",
-			   "-Wno-enum-enum-conversion", "-Wno-switch-default" ];
+			   "-Wno-enum-enum-conversion", "-Wno-switch-default",
+			   "-Wno-implicit-int-enum-cast", "-Wno-implicit-void-ptr-cast",
+			   "-Wno-c++-keyword", "-Wno-clobbered", "-Wno-nrvo" ];
 		};
 
 		// Return the combination of the sets.
@@ -314,19 +328,25 @@ else
 build_config: Gaml = @(gaml){
 	other_cflags: $other_flags
 	strip_flag: $strip_flag
+	lib_flags: $lib_flag
 };
 
 targets: []str =
 push build_config: config_stack
 {
 	gen_o_files: []str =
-	if BUILD_MODE != @library
+	if BUILD_MODE == @both || BUILD_MODE == @bc
 	{
 		@[
 			txt2o("gen/lib.bc", "bc_lib", "bc_lib_name", "BC_ENABLED", true),
 			txt2o("gen/lib2.bc", "bc_lib2", "bc_lib2_name",
 			      "BC_ENABLED && BC_ENABLE_EXTRA_MATH", true),
 			txt2o("gen/bc_help.txt", "bc_help", "", "BC_ENABLED", false),
+		];
+	} +~
+	if BUILD_MODE == @both || BUILD_MODE == @dc
+	{
+		@[
 			txt2o("gen/dc_help.txt", "dc_help", "", "DC_ENABLED", false),
 		];
 	};
@@ -380,7 +400,7 @@ push build_config: config_stack
 	}
 	else if BUILD_MODE == @bc
 	{
-		@[ DC_BIN ];
+		@[ BC_BIN ];
 	}
 	else if BUILD_MODE == @dc
 	{

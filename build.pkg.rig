@@ -288,8 +288,8 @@ MAINEXEC_FLAGS: []str = @[ DEFOPT +~ "MAINEXEC=" +~ MAINEXEC ];
 BC_DEF: str = if LIBRARY_ENABLED == "0" { BC_ENABLED; } else { "1"; };
 DC_DEF: str = if LIBRARY_ENABLED == "0" { DC_ENABLED; } else { "1"; };
 
-CFLAGS1: []str = config_list["cflags"] +~ @[ OPTOPT, INCOPT ] +~
-                 COVERAGE_CFLAGS +~ MAINEXEC_FLAGS;
+CFLAGS1: []str = config_list["cflags"] +~ compiler_flags +~
+                 @[ OPTOPT, INCOPT ] +~ COVERAGE_CFLAGS +~ MAINEXEC_FLAGS;
 CFLAGS2: []str = @[
 	DEFOPT +~ "BC_ENABLED=" +~ BC_DEF,
 	DEFOPT +~ "DC_ENABLED=" +~ DC_DEF,
@@ -659,14 +659,14 @@ fn txt2o(
  * Generates a target for an executable and returns its name.
  * @param name     The name of the executable.
  * @param o_files  The object files for the executable.
- * @return         The name of the generated target.
  */
 fn exe(name: str, o_files: []str) -> void
 {
 	target name: o_files
 	{
 		$ $CC %(config_list["other_cflags"]) %(config_list["strip_flag"])
-		  %(CFLAGS) %(LDFLAGS) $EXEOUTOPT @(tgt) %(file_deps);
+		  %(CFLAGS) %(LDFLAGS) $EXEOUTOPT @(tgt) %(file_deps)
+		  %(config_list["lib_flags"]);
 	}
 }
 
